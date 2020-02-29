@@ -3,6 +3,7 @@ package ru.pavlenty.surfacegame2;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Point;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -15,8 +16,6 @@ public class GameActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
         Point size = new Point();
         getWindowManager().getDefaultDisplay().getSize(size);
         gameView = new GameView(this,size.x,size.y);
@@ -46,20 +45,19 @@ public class GameActivity extends AppCompatActivity {
                 .setCancelable(false)
                 .setPositiveButton("Да", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-
+                        gameView.setGameOver(true);
                         GameView.stopMusic();
-                        Intent startMain = new Intent(Intent.ACTION_MAIN);
-                        startMain.addCategory(Intent.CATEGORY_HOME);
-                        startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(startMain);
-                        finish();
+                        gameView.draw();
+                        //finish();
                     }
                 })
                 .setNegativeButton("Нет", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
+                        gameView.resume();
                         dialog.cancel();
                     }
                 });
+        gameView.pause();
         AlertDialog alert = builder.create();
         alert.show();
 

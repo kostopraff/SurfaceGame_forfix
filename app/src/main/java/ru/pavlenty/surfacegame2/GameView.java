@@ -6,13 +6,14 @@ import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.media.MediaPlayer;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 
 public class GameView extends SurfaceView implements Runnable {
 
@@ -25,6 +26,7 @@ public class GameView extends SurfaceView implements Runnable {
     private SurfaceHolder surfaceHolder;
 
     private ArrayList<Star> stars = new ArrayList<Star>();
+    private ArrayList<Enemy> enemies = new ArrayList<Enemy>();
 
     int screenX;
     int countMisses;
@@ -37,9 +39,8 @@ public class GameView extends SurfaceView implements Runnable {
 
     int score;
 
-
-    int highScore[] = new int[4];
-
+    ArrayList<Integer> highScore = new ArrayList<>();
+    //int highScore[] = new int[4];
 
     SharedPreferences sharedPreferences;
 
@@ -62,6 +63,12 @@ public class GameView extends SurfaceView implements Runnable {
             stars.add(s);
         }
 
+        int enemyNums = 4;
+        for (int i = 0; i < enemyNums; i++) {
+            Enemy enemy = new Enemy(context, screenX, screenY);
+            enemies.add(enemy);
+        }
+
         this.screenX = screenX;
         countMisses = 0;
         isGameOver = false;
@@ -71,10 +78,10 @@ public class GameView extends SurfaceView implements Runnable {
         sharedPreferences = context.getSharedPreferences("SHAR_PREF_NAME", Context.MODE_PRIVATE);
 
 
-        highScore[0] = sharedPreferences.getInt("score1", 0);
-        highScore[1] = sharedPreferences.getInt("score2", 0);
-        highScore[2] = sharedPreferences.getInt("score3", 0);
-        highScore[3] = sharedPreferences.getInt("score4", 0);
+        highScore.add(sharedPreferences.getInt("score1", 0));
+        highScore.add(sharedPreferences.getInt("score2", 0));
+        highScore.add(sharedPreferences.getInt("score3", 0));
+        highScore.add(sharedPreferences.getInt("score4", 0));
         this.context = context;
 
 
@@ -82,8 +89,12 @@ public class GameView extends SurfaceView implements Runnable {
         killedEnemysound = MediaPlayer.create(context,R.raw.killedenemy);
         gameOversound = MediaPlayer.create(context,R.raw.gameover);
 
-
+        gameOnsound.seekTo(18000);
         gameOnsound.start();
+    }
+
+    public void setGameOver(boolean gameOver) {
+        isGameOver = gameOver;
     }
 
     @Override
@@ -101,6 +112,7 @@ public class GameView extends SurfaceView implements Runnable {
         if(isGameOver){
             if(motionEvent.getAction()==MotionEvent.ACTION_DOWN){
                 context.startActivity(new Intent(context,MainActivity.class));
+
             }
         }
         return true;
@@ -129,6 +141,13 @@ public class GameView extends SurfaceView implements Runnable {
                 canvas.drawPoint(s.getX(), s.getY(), paint);
             }
 
+            for (Enemy e : enemies) {
+                canvas.drawBitmap(
+                        e.getBitmap(),
+                        e.getX(),
+                        e.getY(),
+                        paint);
+            }
 
             paint.setTextSize(30);
             canvas.drawText("Очки: "+score,100,50,paint);
@@ -141,11 +160,14 @@ public class GameView extends SurfaceView implements Runnable {
 
 
             if(isGameOver){
+                setHighScore();
+                gameOversound.start();
                 paint.setTextSize(150);
                 paint.setTextAlign(Paint.Align.CENTER);
 
                 int yPos=(int) ((canvas.getHeight() / 2) - ((paint.descent() + paint.ascent()) / 2));
                 canvas.drawText("Конец игры",canvas.getWidth()/2,yPos,paint);
+
             }
 
             surfaceHolder.unlockCanvasAndPost(canvas);
@@ -163,7 +185,9 @@ public class GameView extends SurfaceView implements Runnable {
 
         player.update();
 
-
+        for (Enemy e : enemies) {
+            e.update(player.getSpeed());
+        }
         for (Star s : stars) {
             s.update(player.getSpeed());
         }
@@ -179,6 +203,7 @@ public class GameView extends SurfaceView implements Runnable {
 
     public void pause() {
         playing = false;
+        gameOnsound.pause();
         try {
             gameThread.join();
         } catch (InterruptedException e) {
@@ -186,10 +211,21 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     public void resume() {
+        gameOnsound.start();
         playing = true;
         gameThread = new Thread(this);
         gameThread.start();
     }
 
-
+    private void setHighScore() {
+        highScore.add(score);
+        Collections.sort(highScore);
+        Collections.reverse(highScore);
+        highScore.remove(4);
+        sharedPreferences.edit()
+                .putInt("score1", highScore.get(0))
+                .putInt("score2", highScore.get(1))
+                .putInt("score3", highScore.get(2))
+                .putInt("score4", highScore.get(3)).apply();
+    }
 }
